@@ -1,897 +1,162 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Pipeline &mdash; Membership Sales Follow-up Dashboard</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sales CRM</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  :root{
-    --bg:#14181C;
-    --surface:#1B2127;
-    --surface-2:#212830;
-    --surface-3:#272F38;
-    --border:#2A323C;
-    --border-soft:#232A32;
-    --text:#EDEFF2;
-    --text-dim:#8B95A3;
-    --text-faint:#5B6572;
-    --coral:#FF6B4A;
-    --coral-dim:#3A241E;
-    --teal:#35C7A0;
-    --teal-dim:#17332C;
-    --amber:#FFB84D;
-    --amber-dim:#3A2E17;
-    --blue:#5B8DEF;
-    --lost:#6B7280;
-    --lost-dim:#242830;
-    --radius:10px;
-    --radius-sm:6px;
-    --font-display:'Space Grotesk', sans-serif;
-    --font-body:'Inter', sans-serif;
-    --font-mono:'JetBrains Mono', monospace;
-  }
-  *{box-sizing:border-box; margin:0; padding:0;}
-  html{scroll-behavior:smooth;}
-  body{
-    background:var(--bg);
-    color:var(--text);
-    font-family:var(--font-body);
-    -webkit-font-smoothing:antialiased;
-    min-height:100vh;
-    background-image:
-      radial-gradient(circle at 15% 0%, rgba(255,107,74,0.05), transparent 40%),
-      radial-gradient(circle at 85% 10%, rgba(53,199,160,0.05), transparent 40%);
-  }
-  ::selection{background:var(--coral); color:#fff;}
-  a{color:inherit;}
-  button{font-family:var(--font-body); cursor:pointer;}
-  input,select,textarea{font-family:var(--font-body);}
-
-  /* ---------- Layout shell ---------- */
-  .shell{max-width:1400px; margin:0 auto; padding:28px 32px 80px;}
-  header.topbar{
-    display:flex; align-items:flex-start; justify-content:space-between;
-    flex-wrap:wrap; gap:20px; margin-bottom:28px;
-  }
-  .brand{display:flex; align-items:center; gap:14px;}
-  .brand-mark{
-    width:42px; height:42px; border-radius:11px;
-    background:linear-gradient(135deg, var(--coral), var(--amber));
-    display:flex; align-items:center; justify-content:center;
-    font-family:var(--font-display); font-weight:700; font-size:18px; color:#1a1006;
-    flex-shrink:0;
-  }
-  .brand h1{font-family:var(--font-display); font-size:22px; font-weight:600; letter-spacing:-0.01em;}
-  .brand p{color:var(--text-dim); font-size:12.5px; margin-top:2px; font-family:var(--font-mono);}
-  .topbar-controls{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
-
-  select, .btn{
-    background:var(--surface-2); border:1px solid var(--border); color:var(--text);
-    padding:9px 14px; border-radius:var(--radius-sm); font-size:13px; font-weight:500;
-    transition:border-color .15s, background .15s;
-  }
-  select:hover, .btn:hover{border-color:#3A4552;}
-  select:focus, .btn:focus-visible, input:focus-visible, textarea:focus-visible{
-    outline:2px solid var(--blue); outline-offset:1px;
-  }
-  .btn-primary{background:var(--coral); border-color:var(--coral); color:#1a1006; font-weight:600;}
-  .btn-primary:hover{background:#ff7d5f; border-color:#ff7d5f;}
-  .btn-ghost{background:transparent;}
-  .btn-sm{padding:6px 10px; font-size:12px;}
-  .btn-icon{display:inline-flex; align-items:center; gap:6px;}
-
-  /* ---------- KPI strip ---------- */
-  .kpi-strip{
-    display:grid; grid-template-columns:repeat(7,1fr); gap:1px;
-    background:var(--border); border:1px solid var(--border); border-radius:var(--radius);
-    overflow:hidden; margin-bottom:32px;
-  }
-  .kpi{background:var(--surface); padding:16px 18px; position:relative;}
-  .kpi::before{content:''; position:absolute; top:0; left:0; right:0; height:2px;}
-  .kpi.c-total::before{background:var(--blue);}
-  .kpi.c-open::before{background:var(--amber);}
-  .kpi.c-won::before{background:var(--teal);}
-  .kpi.c-lost::before{background:var(--lost);}
-  .kpi.c-conv::before{background:var(--coral);}
-  .kpi.c-revenue::before{background:var(--teal);}
-  .kpi.c-overdue::before{background:var(--coral);}
-  .kpi-label{font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-dim); font-weight:600; margin-bottom:8px;}
-  .kpi-value{font-family:var(--font-display); font-size:26px; font-weight:600; letter-spacing:-0.01em;}
-  .kpi-value.overdue{color:var(--coral);}
-
-  /* ---------- Section headers ---------- */
-  .section{margin-bottom:36px;}
-  .section-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; gap:12px; flex-wrap:wrap;}
-  .section-head h2{font-family:var(--font-display); font-size:16px; font-weight:600;}
-  .section-head .eyebrow{font-size:11px; color:var(--text-faint); font-family:var(--font-mono); text-transform:uppercase; letter-spacing:.06em; margin-bottom:3px;}
-
-  /* ---------- Pipeline rail (signature element) ---------- */
-  .rail-card{
-    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
-    padding:26px 28px 22px;
-  }
-  .rail{display:flex; align-items:stretch; gap:0; overflow-x:auto; padding-bottom:6px;}
-  .rail-seg{
-    position:relative; display:flex; flex-direction:column; justify-content:center;
-    padding:14px 20px; min-width:118px; height:64px; flex-shrink:0;
-    color:#0e0c09; font-family:var(--font-display);
-  }
-  .rail-seg .n{font-size:22px; font-weight:700; line-height:1;}
-  .rail-seg .lbl{font-size:10px; font-family:var(--font-body); font-weight:600; text-transform:uppercase; letter-spacing:.04em; opacity:.75; margin-top:3px;}
-  .rail-seg:first-child{border-radius:8px 0 0 8px;}
-  .rail-connector{
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    min-width:64px; flex-shrink:0; position:relative;
-  }
-  .rail-connector svg{opacity:.5;}
-  .rail-connector .pct{font-family:var(--font-mono); font-size:11px; color:var(--text-dim); margin-top:4px; white-space:nowrap;}
-  .rail-legend{display:flex; gap:18px; margin-top:16px; flex-wrap:wrap;}
-  .rail-legend span{font-size:11.5px; color:var(--text-dim); display:flex; align-items:center; gap:6px;}
-  .rail-legend i{width:9px; height:9px; border-radius:2px; display:inline-block;}
-
-  @keyframes flow{0%{background-position:0 0;}100%{background-position:40px 0;}}
-  .rail-seg.flowing{
-    background-image:repeating-linear-gradient(45deg, rgba(255,255,255,0.16) 0, rgba(255,255,255,0.16) 8px, transparent 8px, transparent 16px);
-    animation:flow 1.8s linear infinite;
-  }
-  @media (prefers-reduced-motion: reduce){.rail-seg.flowing{animation:none;}}
-
-  /* ---------- Kanban ---------- */
-  .kanban{display:flex; gap:14px; overflow-x:auto; padding-bottom:10px;}
-  .kcol{
-    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
-    min-width:236px; width:236px; flex-shrink:0; display:flex; flex-direction:column; max-height:560px;
-  }
-  .kcol-head{padding:13px 14px 11px; border-bottom:1px solid var(--border-soft); display:flex; align-items:center; justify-content:space-between;}
-  .kcol-head .dot{width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:7px;}
-  .kcol-head-title{font-size:12.5px; font-weight:600; display:flex; align-items:center;}
-  .kcol-count{font-family:var(--font-mono); font-size:11px; color:var(--text-dim); background:var(--surface-3); padding:2px 7px; border-radius:20px;}
-  .kcol-body{padding:10px; overflow-y:auto; flex:1; display:flex; flex-direction:column; gap:8px; min-height:80px;}
-  .kcol-body.dragover{background:var(--surface-2);}
-  .kcol-empty{font-size:11.5px; color:var(--text-faint); text-align:center; padding:16px 6px; font-style:italic;}
-
-  .card{
-    background:var(--surface-2); border:1px solid var(--border); border-radius:8px;
-    padding:11px 12px; cursor:grab; transition:border-color .12s, transform .12s;
-  }
-  .card:hover{border-color:#3A4552;}
-  .card.dragging{opacity:.4;}
-  .card .name{font-size:13px; font-weight:600; margin-bottom:4px;}
-  .card .meta{font-size:11px; color:var(--text-dim); font-family:var(--font-mono); margin-bottom:6px;}
-  .card .badges{display:flex; gap:5px; flex-wrap:wrap;}
-  .badge{font-size:9.5px; font-weight:600; padding:2px 6px; border-radius:20px; text-transform:uppercase; letter-spacing:.02em;}
-  .badge.overdue{background:var(--coral-dim); color:var(--coral);}
-  .badge.today{background:var(--amber-dim); color:var(--amber);}
-  .badge.upcoming{background:var(--surface-3); color:var(--text-dim);}
-  .badge.plan{background:#1B2A3A; color:var(--blue);}
-  .card-actions{display:flex; gap:5px; margin-top:8px; padding-top:8px; border-top:1px solid var(--border-soft);}
-  .qa-btn{
-    flex:1; font-size:10px; font-weight:600; padding:5px 4px; border-radius:6px; border:1px solid var(--border);
-    background:var(--surface-3); color:var(--text-dim); text-align:center; white-space:nowrap;
-    transition:all .12s;
-  }
-  .qa-btn.qa-yes:hover{background:var(--teal-dim); border-color:var(--teal); color:var(--teal);}
-  .qa-btn.qa-no:hover{background:var(--coral-dim); border-color:var(--coral); color:var(--coral);}
-
-  /* ---------- Follow-up table ---------- */
-  .table-card{background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden;}
-  table{width:100%; border-collapse:collapse; font-size:13px;}
-  thead th{
-    text-align:left; padding:11px 14px; background:var(--surface-2); color:var(--text-dim);
-    font-size:10.5px; text-transform:uppercase; letter-spacing:.05em; font-weight:600;
-    border-bottom:1px solid var(--border); white-space:nowrap;
-  }
-  tbody td{padding:11px 14px; border-bottom:1px solid var(--border-soft); vertical-align:middle;}
-  tbody tr:last-child td{border-bottom:none;}
-  tbody tr:hover{background:var(--surface-2);}
-  tbody tr.row-overdue{background:rgba(255,107,74,0.05);}
-  .mono{font-family:var(--font-mono); font-size:12px; color:var(--text-dim);}
-  .status-pill{font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:20px; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap;}
-  .status-pill.Overdue{background:var(--coral-dim); color:var(--coral);}
-  .status-pill.Due-Today{background:var(--amber-dim); color:var(--amber);}
-  .status-pill.Upcoming{background:var(--surface-3); color:var(--text-dim);}
-  .row-actions{display:flex; gap:5px; flex-wrap:wrap; max-width:220px;}
-  .empty-state{padding:50px 20px; text-align:center; color:var(--text-faint);}
-  .empty-state .big{font-family:var(--font-display); font-size:15px; color:var(--text-dim); margin-bottom:6px;}
-
-  /* ---------- Footer / data controls ---------- */
-  footer{margin-top:50px; padding-top:20px; border-top:1px solid var(--border-soft); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px;}
-  footer .foot-note{font-size:11.5px; color:var(--text-faint); max-width:560px; line-height:1.5;}
-  footer .foot-actions{display:flex; gap:8px; flex-wrap:wrap;}
-
-  /* ---------- Modal ---------- */
-  .overlay{
-    position:fixed; inset:0; background:rgba(10,12,14,0.7); backdrop-filter:blur(3px);
-    display:none; align-items:flex-start; justify-content:center; padding:6vh 20px; z-index:100; overflow-y:auto;
-  }
-  .overlay.open{display:flex;}
-  .modal{
-    background:var(--surface); border:1px solid var(--border); border-radius:14px;
-    width:100%; max-width:520px; padding:26px; margin-bottom:40px;
-  }
-  .modal h3{font-family:var(--font-display); font-size:17px; margin-bottom:18px;}
-  .field{margin-bottom:14px;}
-  .field label{display:block; font-size:11.5px; font-weight:600; color:var(--text-dim); margin-bottom:6px; text-transform:uppercase; letter-spacing:.03em;}
-  .field input, .field select, .field textarea{
-    width:100%; background:var(--surface-2); border:1px solid var(--border); color:var(--text);
-    padding:10px 12px; border-radius:var(--radius-sm); font-size:13.5px;
-  }
-  .field textarea{resize:vertical; min-height:60px;}
-  .row2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
-  .modal-actions{display:flex; justify-content:flex-end; gap:8px; margin-top:20px;}
-  .modal-close{position:absolute; top:0; right:0;}
-  .modal-header-row{display:flex; justify-content:space-between; align-items:flex-start;}
-  .icon-btn{background:none; border:none; color:var(--text-faint); font-size:20px; line-height:1; padding:2px 6px;}
-  .icon-btn:hover{color:var(--text);}
-
-  .settings-list{max-height:220px; overflow-y:auto; margin-bottom:12px; border:1px solid var(--border-soft); border-radius:8px;}
-  .settings-row{display:flex; justify-content:space-between; align-items:center; padding:8px 12px; font-size:13px; border-bottom:1px solid var(--border-soft);}
-  .settings-row:last-child{border-bottom:none;}
-  .settings-row button{background:none; border:none; color:var(--coral); font-size:12px;}
-
-  .toast{
-    position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
-    background:var(--surface-3); border:1px solid var(--border); color:var(--text);
-    padding:11px 18px; border-radius:8px; font-size:13px; opacity:0; transition:all .25s; z-index:200;
-    display:flex; align-items:center; gap:8px;
-  }
-  .toast.show{opacity:1; transform:translateX(-50%) translateY(0);}
-  .toast .dot{width:7px; height:7px; border-radius:50%; background:var(--teal);}
-
-  @media (max-width:860px){
-    .shell{padding:20px 16px 60px;}
-    .kpi-strip{grid-template-columns:repeat(2,1fr);}
-    header.topbar{flex-direction:column;}
-    table{font-size:12px;}
-    thead th:nth-child(4), tbody td:nth-child(4), thead th:nth-child(9), tbody td:nth-child(9){display:none;}
-  }
+*{box-sizing:border-box}body{margin:0;font:14px Arial,sans-serif;background:#f4f6fa;color:#172033}
+button,input,select,textarea{font:inherit}button{cursor:pointer;border:0;border-radius:8px;padding:10px 14px}
+.primary{background:#2563eb;color:#fff}.danger{background:#dc2626;color:#fff}
+.login{min-height:100vh;display:grid;place-items:center;background:#111827}.login .box{background:#fff;padding:30px;border-radius:14px;width:min(380px,92%);box-shadow:0 15px 45px #0004}
+.app{display:flex;min-height:100vh}.side{width:230px;background:#111827;color:#d1d5db;padding:20px;flex-shrink:0}.side h2{color:#fff}.side button{display:block;width:100%;text-align:left;background:transparent;color:#d1d5db;margin:5px 0}.side button:hover,.side button.active{background:#263244;color:#fff}
+.main{flex:1;padding:24px;overflow:auto}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.card,.panel{background:#fff;border-radius:12px;padding:18px;box-shadow:0 2px 10px #0001;margin-bottom:18px}.card b{font-size:28px;display:block;margin-top:7px}
+table{width:100%;border-collapse:collapse}th,td{padding:10px;border-bottom:1px solid #edf0f4;text-align:left}th{background:#f8fafc}
+input,select,textarea{width:100%;padding:10px;border:1px solid #d8dde6;border-radius:8px;margin:5px 0 12px;background:#fff}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.badge{padding:4px 8px;border-radius:999px;background:#eef2ff;font-size:12px}.won{background:#dcfce7}.follow{background:#fef3c7}.lost{background:#fee2e2}
+.modal{position:fixed;inset:0;background:#0008;display:grid;place-items:center;padding:20px}.modal>div{background:#fff;padding:24px;border-radius:14px;width:min(700px,95%);max-height:92vh;overflow:auto}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap}.muted{color:#667085}.ok{color:#15803d}.warn{color:#b45309}
+@media(max-width:900px){.cards{grid-template-columns:1fr 1fr}.side{width:190px}}
 </style>
 </head>
-<body>
-<div class="shell">
-
-  <header class="topbar">
-    <div class="brand">
-      <div class="brand-mark">MP</div>
-      <div>
-        <h1>Pipeline</h1>
-        <p id="asOfDate">MEMBERSHIP SALES &middot; FOLLOW-UP DASHBOARD</p>
-      </div>
-    </div>
-    <div class="topbar-controls">
-      <select id="agentFilter" aria-label="Filter by agent"></select>
-      <button class="btn btn-ghost btn-icon" id="settingsBtn">&#9881;&nbsp; Settings</button>
-      <button class="btn btn-primary btn-icon" id="addLeadBtn">+ Add Lead</button>
-    </div>
-  </header>
-
-  <!-- KPI STRIP -->
-  <div class="kpi-strip" id="kpiStrip"></div>
-
-  <!-- PIPELINE RAIL -->
-  <div class="section">
-    <div class="section-head">
-      <div>
-        <div class="eyebrow">Conversion flow</div>
-        <h2>Sales Pipeline</h2>
-      </div>
-    </div>
-    <div class="rail-card">
-      <div class="rail" id="pipelineRail"></div>
-      <div class="rail-legend" id="railLegend"></div>
-    </div>
-  </div>
-
-  <!-- KANBAN -->
-  <div class="section">
-    <div class="section-head">
-      <div>
-        <div class="eyebrow">Drag a card to move stage</div>
-        <h2>Pipeline Board</h2>
-      </div>
-    </div>
-    <div class="kanban" id="kanban"></div>
-  </div>
-
-  <!-- TODAY'S FOLLOW-UPS -->
-  <div class="section">
-    <div class="section-head">
-      <div>
-        <div class="eyebrow" id="followupCount">&nbsp;</div>
-        <h2>Today's Follow-ups</h2>
-      </div>
-    </div>
-    <div class="table-card">
-      <table>
-        <thead>
-          <tr>
-            <th>Status</th><th>Customer</th><th>Phone</th><th>Plan</th><th>Stage</th>
-            <th>Next Follow-up</th><th>Agent</th><th>Deal (₹)</th><th>Notes</th><th></th>
-          </tr>
-        </thead>
-        <tbody id="followupBody"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <footer>
-    <div class="foot-note">
-      Data is stored locally in this browser (no server). Use <strong>Export CSV</strong> to back up, or
-      <strong>Import</strong> to restore. To share one live pipeline across your whole team, this front-end
-      can be pointed at a small shared backend (e.g. Firebase or Supabase) &mdash; see the README for notes.
-    </div>
-    <div class="foot-actions">
-      <button class="btn btn-sm" id="exportBtn">Export CSV</button>
-      <button class="btn btn-sm" id="importBtn">Import CSV</button>
-      <button class="btn btn-sm" id="resetBtn">Reset Sample Data</button>
-      <button class="btn btn-sm" id="clearBtn" style="color:var(--coral);">Clear All</button>
-    </div>
-  </footer>
-</div>
-
-<!-- ADD/EDIT LEAD MODAL -->
-<div class="overlay" id="leadOverlay">
-  <div class="modal">
-    <div class="modal-header-row">
-      <h3 id="leadModalTitle">Add Lead</h3>
-      <button class="icon-btn" data-close>&times;</button>
-    </div>
-    <form id="leadForm">
-      <input type="hidden" id="leadId">
-      <div class="field"><label>Customer name</label><input id="f_name" required></div>
-      <div class="row2">
-        <div class="field"><label>Phone</label><input id="f_phone" required></div>
-        <div class="field"><label>Email</label><input id="f_email" type="email"></div>
-      </div>
-      <div class="row2">
-        <div class="field"><label>Assigned agent</label><select id="f_agent" required></select></div>
-        <div class="field"><label>Membership plan</label><select id="f_plan" required></select></div>
-      </div>
-      <div class="row2">
-        <div class="field"><label>Stage</label>
-          <select id="f_stage">
-            <option>New</option><option>Follow-up 1</option><option>Follow-up 2</option>
-            <option>Follow-up 3</option><option>Closed-Won</option><option>Closed-Lost</option>
-          </select>
-        </div>
-        <div class="field"><label>Next follow-up date</label><input id="f_next" type="date"></div>
-      </div>
-      <div class="field"><label>Notes</label><textarea id="f_notes"></textarea></div>
-      <div class="modal-actions">
-        <button type="button" class="btn" data-close>Cancel</button>
-        <button type="submit" class="btn btn-primary">Save Lead</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<!-- SETTINGS MODAL -->
-<div class="overlay" id="settingsOverlay">
-  <div class="modal">
-    <div class="modal-header-row">
-      <h3>Settings</h3>
-      <button class="icon-btn" data-close>&times;</button>
-    </div>
-    <div class="field"><label>Agents</label>
-      <div class="settings-list" id="agentList"></div>
-      <div style="display:flex; gap:8px;">
-        <input id="newAgentInput" placeholder="Add agent name" style="flex:1; background:var(--surface-2); border:1px solid var(--border); color:var(--text); padding:9px 12px; border-radius:6px; font-size:13px;">
-        <button class="btn btn-sm" id="addAgentBtn">Add</button>
-      </div>
-    </div>
-    <div class="field" style="margin-top:18px;"><label>Membership plans</label>
-      <div class="settings-list" id="planList"></div>
-      <div style="display:flex; gap:8px;">
-        <input id="newPlanName" placeholder="Plan name" style="flex:1; background:var(--surface-2); border:1px solid var(--border); color:var(--text); padding:9px 12px; border-radius:6px; font-size:13px;">
-        <input id="newPlanPrice" placeholder="Price" type="number" style="width:90px; background:var(--surface-2); border:1px solid var(--border); color:var(--text); padding:9px 12px; border-radius:6px; font-size:13px;">
-        <button class="btn btn-sm" id="addPlanBtn">Add</button>
-      </div>
-    </div>
-    <div class="modal-actions"><button type="button" class="btn btn-primary" data-close>Done</button></div>
-  </div>
-</div>
-
-<input type="file" id="importFile" accept=".csv" style="display:none;">
-<div class="toast" id="toast"><span class="dot"></span><span id="toastMsg"></span></div>
-
+<body><div id="root"></div>
 <script>
-/* =========================================================================
-   DATA LAYER  (localStorage -- swap this section out to point at a real
-   backend later; everything above reads from getLeads()/getAgents()/getPlans())
-========================================================================= */
-const LS_KEY = 'pipeline_leads_v1';
-const LS_AGENTS = 'pipeline_agents_v1';
-const LS_PLANS = 'pipeline_plans_v1';
-const STAGES = ['New','Follow-up 1','Follow-up 2','Follow-up 3','Closed-Won','Closed-Lost'];
-const STAGE_COLORS = {
-  'New':'#5B8DEF','Follow-up 1':'#FFB84D','Follow-up 2':'#FF9D4D','Follow-up 3':'#FF6B4A',
-  'Closed-Won':'#35C7A0','Closed-Lost':'#6B7280'
-};
+/*
+  1) Create a Supabase project.
+  2) Replace SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY below.
+  3) Run schema.sql in Supabase SQL Editor.
+*/
+const SUPABASE_URL="YOUR_SUPABASE_URL";
+const SUPABASE_PUBLISHABLE_KEY="YOUR_SUPABASE_PUBLISHABLE_KEY";
+const sb=(SUPABASE_URL.startsWith("http")&&SUPABASE_PUBLISHABLE_KEY.startsWith("ey"))
+  ? supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY):null;
 
-function uid(){ return 'L' + Math.random().toString(36).slice(2,9); }
-function todayISO(){ return new Date().toISOString().slice(0,10); }
-function addDays(iso, n){ const d = new Date(iso+'T00:00:00'); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); }
-function daysBetween(a,b){ return Math.round((new Date(b+'T00:00:00') - new Date(a+'T00:00:00'))/86400000); }
+let session=null, profile=null, screen="dashboard";
 
-function seedData(){
-  const t = todayISO();
-  const agents = ['Agent 1','Agent 2','Agent 3','Agent 4','Agent 5','Agent 6'];
-  const plans = [
-    {name:'Basic Membership', price:1999},
-    {name:'Standard Membership', price:3999},
-    {name:'Premium Membership', price:6999},
-    {name:'Annual Elite Membership', price:29999},
-  ];
-  const leads = [
-    {name:'Riya Kapoor', phone:'555-1001', email:'riya.k@example.com', agent:'Agent 1', plan:'Premium Membership', stage:'Closed-Won', next:null, notes:'Signed up at event booth.'},
-    {name:'Arjun Mehta', phone:'555-1002', email:'arjun.m@example.com', agent:'Agent 2', plan:'Standard Membership', stage:'Follow-up 2', next:addDays(t,1), notes:'Wants family add-on pricing.'},
-    {name:'Sana Iyer', phone:'555-1003', email:'sana.i@example.com', agent:'Agent 1', plan:'Basic Membership', stage:'New', next:addDays(t,2), notes:''},
-    {name:'Karan Verma', phone:'555-1004', email:'karan.v@example.com', agent:'Agent 3', plan:'Annual Elite Membership', stage:'Closed-Won', next:null, notes:''},
-    {name:'Neha Joshi', phone:'555-1005', email:'neha.j@example.com', agent:'Agent 4', plan:'Standard Membership', stage:'Follow-up 1', next:addDays(t,-1), notes:'Missed last call, try mornings.'},
-    {name:'Vikram Rao', phone:'555-1006', email:'vikram.r@example.com', agent:'Agent 2', plan:'Premium Membership', stage:'Closed-Lost', next:null, notes:'Chose a competitor.'},
-    {name:'Ananya Singh', phone:'555-1007', email:'ananya.s@example.com', agent:'Agent 5', plan:'Basic Membership', stage:'Follow-up 3', next:addDays(t,-2), notes:'Price sensitive.'},
-    {name:'Farhan Ali', phone:'555-1008', email:'farhan.a@example.com', agent:'Agent 3', plan:'Premium Membership', stage:'New', next:addDays(t,3), notes:''},
-    {name:'Divya Nair', phone:'555-1009', email:'divya.n@example.com', agent:'Agent 6', plan:'Standard Membership', stage:'Closed-Won', next:null, notes:''},
-    {name:'Rohan Gupta', phone:'555-1010', email:'rohan.g@example.com', agent:'Agent 4', plan:'Annual Elite Membership', stage:'Follow-up 1', next:addDays(t,4), notes:''},
-    {name:'Ishita Kapoor', phone:'555-1011', email:'ishita.k@example.com', agent:'Agent 6', plan:'Basic Membership', stage:'Closed-Lost', next:null, notes:'Not interested right now.'},
-    {name:'Aditya Shah', phone:'555-1012', email:'aditya.s@example.com', agent:'Agent 5', plan:'Premium Membership', stage:'Follow-up 2', next:addDays(t,0), notes:'Follow up today, said afternoon works.'},
-  ].map(l => ({ id: uid(), dateAdded: t, lastContact: t, ...l }));
+const money=n=>"₹"+Number(n||0).toLocaleString("en-IN");
+const today=()=>new Date().toISOString().slice(0,10);
+const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
 
-  localStorage.setItem(LS_AGENTS, JSON.stringify(agents));
-  localStorage.setItem(LS_PLANS, JSON.stringify(plans));
-  localStorage.setItem(LS_KEY, JSON.stringify(leads));
+async function boot(){
+  if(!sb){showSetup();return}
+  const {data:{session:s}}=await sb.auth.getSession();
+  session=s;
+  if(session) await loadProfile();
+  render();
+  sb.auth.onAuthStateChange(async (_e,s)=>{session=s;if(s) await loadProfile();else profile=null;render()});
 }
-
-function getLeads(){ return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); }
-function setLeads(l){ localStorage.setItem(LS_KEY, JSON.stringify(l)); }
-function getAgents(){ return JSON.parse(localStorage.getItem(LS_AGENTS) || '[]'); }
-function setAgents(a){ localStorage.setItem(LS_AGENTS, JSON.stringify(a)); }
-function getPlans(){ return JSON.parse(localStorage.getItem(LS_PLANS) || '[]'); }
-function setPlans(p){ localStorage.setItem(LS_PLANS, JSON.stringify(p)); }
-function planPrice(name){ const p = getPlans().find(p=>p.name===name); return p ? p.price : 0; }
-
-if(!localStorage.getItem(LS_KEY)) seedData();
-
-/* =========================================================================
-   DERIVED STATE
-========================================================================= */
-function followupStatus(lead){
-  if(lead.stage === 'Closed-Won') return 'Won';
-  if(lead.stage === 'Closed-Lost') return 'Lost';
-  if(!lead.next) return 'No Date';
-  const d = daysBetween(todayISO(), lead.next);
-  if(d < 0) return 'Overdue';
-  if(d === 0) return 'Due Today';
-  return 'Upcoming';
+function showSetup(){
+ root.innerHTML=`<div class="login"><div class="box">
+ <h1>Sales CRM</h1><p>GitHub + Supabase setup is not connected yet.</p>
+ <p class="muted">Open <b>README.md</b> and follow the 3 setup steps, then replace the two configuration values in index.html.</p>
+ </div></div>`;
 }
-function currentAgentFilter(){ return document.getElementById('agentFilter').value; }
-function filteredLeads(){
-  const a = currentAgentFilter();
-  const all = getLeads();
-  return a === 'All Agents' ? all : all.filter(l => l.agent === a);
+async function loadProfile(){
+ const {data,error}=await sb.from("profiles").select("*").eq("id",session.user.id).single();
+ if(error){alert("Profile not found. Ask the manager to create/approve your user.");await sb.auth.signOut({scope:"local"});return}
+ profile=data;
 }
-
-/* =========================================================================
-   RENDER: top bar / filters
-========================================================================= */
-function renderAgentFilter(){
-  const sel = document.getElementById('agentFilter');
-  const current = sel.value || 'All Agents';
-  sel.innerHTML = '';
-  ['All Agents', ...getAgents()].forEach(a=>{
-    const o = document.createElement('option'); o.value=a; o.textContent=a; sel.appendChild(o);
-  });
-  sel.value = [...sel.options].some(o=>o.value===current) ? current : 'All Agents';
+async function login(){
+ const {error}=await sb.auth.signInWithPassword({email:email.value.trim(),password:password.value});
+ if(error) alert(error.message);
 }
-
-function renderAsOf(){
-  const d = new Date();
-  document.getElementById('asOfDate').textContent =
-    'MEMBERSHIP SALES · AS OF ' + d.toLocaleDateString('en-US',{day:'2-digit',month:'short',year:'numeric'}).toUpperCase();
+async function logout(){await sb.auth.signOut({scope:"local"})}
+function go(x){screen=x;render()}
+function render(){
+ if(!session||!profile){root.innerHTML=`<div class="login"><div class="box"><h1>Sales CRM</h1><p class="muted">Team Sales & Pipeline</p>
+ <label>Email</label><input id="email" type="email" placeholder="agent@company.com">
+ <label>Password</label><input id="password" type="password">
+ <button class="primary" style="width:100%" onclick="login()">Login</button>
+ </div></div>`;return}
+ const menus=[["dashboard","🏠 Dashboard"],["leads",profile.role==="manager"?"👥 All Leads":"👥 My Leads"],["followups","📞 Follow-ups"],["pipeline","📊 Pipeline"],["sales","💰 Sales"]];
+ if(profile.role==="manager")menus.push(["reports","📑 Reports"],["settings","⚙️ Settings"]);
+ root.innerHTML=`<div class="app"><aside class="side"><h2>Sales CRM</h2><p>${esc(profile.full_name)}<br><small>${profile.role}</small></p>
+ ${menus.map(m=>`<button class="${screen===m[0]?"active":""}" onclick="go('${m[0]}')">${m[1]}</button>`).join("")}
+ <hr><button onclick="logout()">↪ Logout</button></aside><main class="main"><div class="top"><div><h1 style="margin:0">${screenName()}</h1><span class="muted">${today()}</span></div>${screen==="leads"?'<button class="primary" onclick="leadForm()">+ Add Lead</button>':""}</div>${page()}</main></div>`;
 }
+function screenName(){return ({dashboard:"Dashboard",leads:profile.role==="manager"?"All Leads":"My Leads",followups:"Follow-ups",pipeline:"Sales Pipeline",sales:"Sales",reports:"Reports",settings:"Settings"})[screen]}
+function page(){if(screen==="dashboard")return dashboard();if(screen==="leads")return leadsPage();if(screen==="followups")return followups();if(screen==="pipeline")return pipeline();if(screen==="sales")return salesPage();if(screen==="reports")return reports();return settings()}
 
-/* =========================================================================
-   RENDER: KPI strip
-========================================================================= */
-function renderKPIs(){
-  const leads = filteredLeads();
-  const total = leads.length;
-  const open = leads.filter(l=>['New','Follow-up 1','Follow-up 2','Follow-up 3'].includes(l.stage)).length;
-  const won = leads.filter(l=>l.stage==='Closed-Won').length;
-  const lost = leads.filter(l=>l.stage==='Closed-Lost').length;
-  const conv = (won+lost) ? Math.round(won/(won+lost)*100) : 0;
-  const revenue = leads.filter(l=>l.stage==='Closed-Won').reduce((s,l)=>s+planPrice(l.plan),0);
-  const overdue = leads.filter(l=>followupStatus(l)==='Overdue').length;
-
-  const kpis = [
-    ['c-total','Total Leads', total],
-    ['c-open','In Pipeline', open],
-    ['c-won','Closed-Won', won],
-    ['c-lost','Closed-Lost', lost],
-    ['c-conv','Conversion Rate', conv+'%'],
-    ['c-revenue','Revenue Won', '₹'+revenue.toLocaleString('en-IN')],
-    ['c-overdue','Overdue Follow-ups', overdue],
-  ];
-  document.getElementById('kpiStrip').innerHTML = kpis.map(([cls,label,val])=>`
-    <div class="kpi ${cls}">
-      <div class="kpi-label">${label}</div>
-      <div class="kpi-value ${cls==='c-overdue'&&val>0?'overdue':''}">${val}</div>
-    </div>`).join('');
+async function getLeads(){
+ let q=sb.from("leads").select("*,profiles:agent_id(full_name)").order("created_at",{ascending:false});
+ if(profile.role!=="manager")q=q.eq("agent_id",profile.id);
+ const {data,error}=await q;if(error){alert(error.message);return []}return data||[];
 }
-
-/* =========================================================================
-   RENDER: Pipeline rail (signature funnel/flow element)
-========================================================================= */
-function renderRail(){
-  const leads = filteredLeads();
-  const flowStages = ['New','Follow-up 1','Follow-up 2','Follow-up 3','Closed-Won'];
-  const counts = flowStages.map(s => leads.filter(l=>l.stage===s).length);
-  const maxCount = Math.max(1, ...counts);
-  const rail = document.getElementById('pipelineRail');
-  let html = '';
-  flowStages.forEach((stage, i)=>{
-    const c = counts[i];
-    const widthPct = Math.max(14, (c / maxCount) * 100);
-    const isFlowing = i < flowStages.length - 1 && c > 0;
-    html += `<div class="rail-seg ${isFlowing?'flowing':''}" style="background:${STAGE_COLORS[stage]}; width:${100 + widthPct}px;">
-      <div class="n">${c}</div><div class="lbl">${stage}</div>
-    </div>`;
-    if(i < flowStages.length - 1){
-      const next = counts[i+1];
-      const dropPct = c>0 ? Math.round((next/c)*100) : 0;
-      html += `<div class="rail-connector">
-        <svg width="28" height="14" viewBox="0 0 28 14"><path d="M0 7 H20 M14 1 L20 7 L14 13" stroke="#5B6572" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <div class="pct">${dropPct}%</div>
-      </div>`;
-    }
-  });
-  rail.innerHTML = html;
-
-  const lost = leads.filter(l=>l.stage==='Closed-Lost').length;
-  document.getElementById('railLegend').innerHTML = `
-    <span><i style="background:${STAGE_COLORS['New']}"></i>New lead enters pipeline</span>
-    <span><i style="background:${STAGE_COLORS['Closed-Won']}"></i>Converts to paid membership</span>
-    <span><i style="background:${STAGE_COLORS['Closed-Lost']}"></i>${lost} lost this period (not shown in flow)</span>
-  `;
+async function getSales(){
+ let q=sb.from("sales").select("*,profiles:agent_id(full_name)").order("sold_at",{ascending:false});
+ if(profile.role!=="manager")q=q.eq("agent_id",profile.id);
+ const {data,error}=await q;if(error){alert(error.message);return []}return data||[];
 }
-
-/* =========================================================================
-   RENDER: Kanban board
-========================================================================= */
-function renderKanban(){
-  const leads = filteredLeads();
-  const board = document.getElementById('kanban');
-  board.innerHTML = STAGES.map(stage=>{
-    const items = leads.filter(l=>l.stage===stage);
-    const cards = items.map(l=>{
-      const status = followupStatus(l);
-      const badgeClass = status==='Overdue'?'overdue':status==='Due Today'?'today':'upcoming';
-      const dateLabel = l.next ? (status==='Overdue' ? Math.abs(daysBetween(todayISO(),l.next))+'d overdue' : status==='Due Today' ? 'Due today' : l.next) : '';
-      const showQuickActions = !stage.startsWith('Closed');
-      return `<div class="card" draggable="true" data-id="${l.id}">
-        <div onclick="openLeadModal('${l.id}')">
-          <div class="name">${escapeHtml(l.name)}</div>
-          <div class="meta">${escapeHtml(l.agent)} &middot; ${escapeHtml(l.phone)}</div>
-          <div class="badges">
-            <span class="badge plan">${escapeHtml(l.plan.replace(' Membership',''))}</span>
-            ${dateLabel ? `<span class="badge ${badgeClass}">${dateLabel}</span>` : ''}
-          </div>
-        </div>
-        ${showQuickActions ? `<div class="card-actions">
-          <button class="qa-btn qa-yes" onclick="event.stopPropagation(); markInterest('${l.id}', true)" title="Mark Interested">&#10003; Interested</button>
-          <button class="qa-btn qa-no" onclick="event.stopPropagation(); markInterest('${l.id}', false)" title="Mark Not Interested">&#10005; Not Interested</button>
-        </div>` : ''}
-      </div>`;
-    }).join('') || `<div class="kcol-empty">No leads here</div>`;
-
-    return `<div class="kcol" data-stage="${stage}">
-      <div class="kcol-head">
-        <span class="kcol-head-title"><span class="dot" style="background:${STAGE_COLORS[stage]}"></span>${stage}</span>
-        <span class="kcol-count">${items.length}</span>
-      </div>
-      <div class="kcol-body" data-stage="${stage}">${cards}</div>
-    </div>`;
-  }).join('');
-
-  // drag events
-  board.querySelectorAll('.card').forEach(card=>{
-    card.addEventListener('dragstart', e=>{ card.classList.add('dragging'); e.dataTransfer.setData('text/plain', card.dataset.id); });
-    card.addEventListener('dragend', ()=> card.classList.remove('dragging'));
-  });
-  board.querySelectorAll('.kcol-body').forEach(col=>{
-    col.addEventListener('dragover', e=>{ e.preventDefault(); col.classList.add('dragover'); });
-    col.addEventListener('dragleave', ()=> col.classList.remove('dragover'));
-    col.addEventListener('drop', e=>{
-      e.preventDefault(); col.classList.remove('dragover');
-      const id = e.dataTransfer.getData('text/plain');
-      const newStage = col.dataset.stage;
-      const leads = getLeads();
-      const lead = leads.find(l=>l.id===id);
-      if(lead && lead.stage !== newStage){
-        lead.stage = newStage;
-        lead.lastContact = todayISO();
-        if(newStage.startsWith('Closed')) lead.next = null;
-        setLeads(leads);
-        renderAll();
-        showToast(`${lead.name} moved to ${newStage}`);
-      }
-    });
-  });
+function dashboard(){
+ return `<div id="dash"><p class="muted">Loading live data…</p></div>`;
 }
-
-/* =========================================================================
-   RENDER: Today's follow-ups table
-========================================================================= */
-function priorityRank(status, lead){
-  if(status==='Overdue') return -1000 + daysBetween(todayISO(), lead.next); // more overdue = more negative
-  if(status==='Due Today') return 0;
-  if(status==='Upcoming') return 1000 + daysBetween(todayISO(), lead.next);
-  return 999999;
+async function fillDashboard(){
+ const [ls,ss]=await Promise.all([getLeads(),getSales()]);
+ const revenue=ss.reduce((a,s)=>a+Number(s.final_price),0),disc=ss.reduce((a,s)=>a+Number(s.discount_amount),0);
+ const todaySales=ss.filter(s=>String(s.sold_at).slice(0,10)===today()).length;
+ let html=`<div class="cards"><div class="card">Leads<b>${ls.length}</b></div><div class="card">Today's Sales<b>${todaySales}</b></div><div class="card">Revenue<b>${money(revenue)}</b></div><div class="card">Discount Given<b>${money(disc)}</b></div></div>
+ <div class="panel"><h3>Today's Target</h3><b>${todaySales} / ${profile.daily_target||10} sales</b></div>`;
+ if(profile.role==="manager"){
+  const agents=await sb.from("profiles").select("id,full_name").eq("role","agent").eq("active",true);
+  html+=`<div class="panel"><h3>Team Performance</h3><table><tr><th>Agent</th><th>Leads</th><th>Sales</th><th>Revenue</th></tr>${(agents.data||[]).map(a=>{let al=ls.filter(x=>x.agent_id===a.id),as=ss.filter(x=>x.agent_id===a.id);return `<tr><td>${esc(a.full_name)}</td><td>${al.length}</td><td><b>${as.length}</b></td><td>${money(as.reduce((z,x)=>z+Number(x.final_price),0))}</td></tr>`}).join("")}</table></div>`;
+ }
+ document.getElementById("dash").innerHTML=html;
 }
-function renderFollowups(){
-  const leads = filteredLeads()
-    .map(l=>({...l, status: followupStatus(l)}))
-    .filter(l=>['Overdue','Due Today','Upcoming'].includes(l.status))
-    .sort((a,b)=> priorityRank(a.status,a) - priorityRank(b.status,b));
-
-  const overdueCount = leads.filter(l=>l.status==='Overdue').length;
-  const todayCount = leads.filter(l=>l.status==='Due Today').length;
-  document.getElementById('followupCount').textContent =
-    `${leads.length} to contact  ·  ${overdueCount} overdue  ·  ${todayCount} due today`;
-
-  const body = document.getElementById('followupBody');
-  if(leads.length===0){
-    body.innerHTML = `<tr><td colspan="10"><div class="empty-state"><div class="big">All caught up</div>No follow-ups pending for this view.</div></td></tr>`;
-    return;
-  }
-  body.innerHTML = leads.map(l=>{
-    const pillClass = l.status.replace(' ','-');
-    return `<tr class="${l.status==='Overdue'?'row-overdue':''}">
-      <td><span class="status-pill ${pillClass}">${l.status}</span></td>
-      <td>${escapeHtml(l.name)}</td>
-      <td class="mono">${escapeHtml(l.phone)}</td>
-      <td>${escapeHtml(l.plan)}</td>
-      <td>${l.stage}</td>
-      <td class="mono">${l.next || '—'}</td>
-      <td>${escapeHtml(l.agent)}</td>
-      <td class="mono">₹${planPrice(l.plan).toLocaleString('en-IN')}</td>
-      <td style="max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escapeHtml(l.notes||'')}">${escapeHtml(l.notes||'—')}</td>
-      <td class="row-actions">
-        <button class="btn btn-sm" onclick="markContacted('${l.id}')">Contacted</button>
-        <button class="btn btn-sm" style="color:var(--teal); border-color:var(--teal);" onclick="markInterest('${l.id}', true)">Interested</button>
-        <button class="btn btn-sm" style="color:var(--coral); border-color:var(--coral);" onclick="markInterest('${l.id}', false)">Not Interested</button>
-        <button class="btn btn-sm btn-ghost" onclick="openLeadModal('${l.id}')">Edit</button>
-      </td>
-    </tr>`;
-  }).join('');
+function leadsPage(){setTimeout(async()=>{document.getElementById("leadbox").innerHTML=leadTable(await getLeads())},0);return `<div class="panel"><div id="leadbox">Loading…</div></div>`}
+function leadTable(ls){return `<table><tr><th>Customer</th><th>Mobile</th><th>Agent</th><th>Membership</th><th>Status</th><th>Follow-up</th><th></th></tr>${ls.map(l=>`<tr><td><b>${esc(l.customer_name)}</b><br><small>${esc(l.email||"")}</small></td><td>${esc(l.mobile)}</td><td>${esc(l.profiles?.full_name||"")}</td><td>${esc(l.membership||"")}</td><td><span class="badge ${l.status==="Won"?"won":l.status==="Lost"?"lost":l.status==="Follow-up"?"follow":""}">${esc(l.status)}</span></td><td>${esc(l.next_followup||"—")}</td><td><button onclick="leadForm('${l.id}')">Open</button></td></tr>`).join("")}</table>`}
+async function leadForm(id){
+ let l=null;if(id){const {data}=await sb.from("leads").select("*").eq("id",id).single();l=data}
+ let agents=[];if(profile.role==="manager"){const r=await sb.from("profiles").select("id,full_name").eq("role","agent").eq("active",true);agents=r.data||[]}
+ showModal(`<h2>${id?"Edit":"Add"} Lead</h2><div class="grid">
+ <div><label>Customer Name*</label><input id="f_name" value="${esc(l?.customer_name||"")}"></div>
+ <div><label>Mobile*</label><input id="f_mobile" value="${esc(l?.mobile||"")}"></div>
+ <div><label>Email</label><input id="f_email" value="${esc(l?.email||"")}"></div>
+ <div><label>Membership</label><select id="f_membership">${["White","Black","Orange","Other"].map(x=>`<option ${l?.membership===x?"selected":""}>${x}</option>`).join("")}</select></div>
+ <div><label>Lead Source</label><input id="f_source" value="${esc(l?.source||"")}"></div>
+ <div><label>Priority</label><select id="f_priority">${["Hot","Warm","Cold"].map(x=>`<option ${l?.priority===x?"selected":""}>${x}</option>`).join("")}</select></div>
+ <div><label>Status</label><select id="f_status">${["New","Contacted","Interested","Follow-up","Negotiation","Won","Lost","No Answer","Not Interested"].map(x=>`<option ${l?.status===x?"selected":""}>${x}</option>`).join("")}</select></div>
+ <div><label>Next Follow-up</label><input id="f_followup" type="date" value="${esc(l?.next_followup||"")}"></div>
+ </div><label>Remarks</label><textarea id="f_remarks">${esc(l?.remarks||"")}</textarea>
+ ${profile.role==="manager"?`<label>Assigned Agent</label><select id="f_agent">${agents.map(a=>`<option value="${a.id}" ${l?.agent_id===a.id?"selected":""}>${esc(a.full_name)}</option>`).join("")}</select>`:""}
+ <button class="primary" onclick="saveLead('${id||""}')">Save Lead</button> ${id?`<button onclick="saleForm('${id}')">Convert to Sale</button>`:""} <button onclick="closeModal()">Cancel</button>`);
 }
-
-function markInterest(id, interested){
-  const leads = getLeads();
-  const lead = leads.find(l=>l.id===id);
-  if(!lead) return;
-  lead.stage = interested ? 'Closed-Won' : 'Closed-Lost';
-  lead.lastContact = todayISO();
-  lead.next = null;
-  setLeads(leads);
-  renderAll();
-  showToast(`${lead.name} marked ${interested ? 'Interested (Closed-Won)' : 'Not Interested (Closed-Lost)'}`);
+async function saveLead(id){
+ const payload={customer_name:f_name.value.trim(),mobile:f_mobile.value.trim(),email:f_email.value.trim()||null,membership:f_membership.value,source:f_source.value.trim()||null,priority:f_priority.value,status:f_status.value,next_followup:f_followup.value||null,remarks:f_remarks.value.trim()||null};
+ if(profile.role==="manager")payload.agent_id=f_agent.value;else payload.agent_id=profile.id;
+ if(!payload.customer_name||!payload.mobile)return alert("Name and mobile are required");
+ const r=id?await sb.from("leads").update(payload).eq("id",id):await sb.from("leads").insert(payload);
+ if(r.error)return alert(r.error.message);
+ closeModal();render();
 }
-
-function markContacted(id){
-  const leads = getLeads();
-  const lead = leads.find(l=>l.id===id);
-  if(!lead) return;
-  const stageOrder = ['New','Follow-up 1','Follow-up 2','Follow-up 3'];
-  const idx = stageOrder.indexOf(lead.stage);
-  if(idx > -1 && idx < stageOrder.length - 1){ lead.stage = stageOrder[idx+1]; }
-  lead.lastContact = todayISO();
-  lead.next = addDays(todayISO(), 3);
-  setLeads(leads);
-  renderAll();
-  showToast(`${lead.name} marked as contacted — next follow-up in 3 days`);
+async function followups(){
+ const ls=await getLeads();return `<div class="panel"><table><tr><th>Customer</th><th>Agent</th><th>Follow-up</th><th>Status</th><th></th></tr>${ls.filter(l=>l.next_followup).sort((a,b)=>String(a.next_followup).localeCompare(String(b.next_followup))).map(l=>`<tr><td>${esc(l.customer_name)}</td><td>${esc(l.profiles?.full_name||"")}</td><td>${esc(l.next_followup)} ${l.next_followup<today()?'<b class="warn">OVERDUE</b>':""}</td><td>${esc(l.status)}</td><td><button onclick="leadForm('${l.id}')">Update</button></td></tr>`).join("")}</table></div>`;
 }
-
-/* =========================================================================
-   MODAL: Add / Edit lead
-========================================================================= */
-function populateSelects(){
-  const agentSel = document.getElementById('f_agent');
-  const planSel = document.getElementById('f_plan');
-  agentSel.innerHTML = getAgents().map(a=>`<option value="${a}">${a}</option>`).join('');
-  planSel.innerHTML = getPlans().map(p=>`<option value="${p.name}">${p.name} — ₹${Number(p.price).toLocaleString('en-IN')}</option>`).join('');
+function followups(){const el=`<div id="followbox" class="panel">Loading…</div>`;setTimeout(async()=>{document.getElementById("followbox").outerHTML=await followupsAsync()},0);return el}
+async function followupsAsync(){return await followupsReal()}
+async function followupsReal(){const ls=await getLeads();return `<div id="followbox" class="panel"><table><tr><th>Customer</th><th>Agent</th><th>Follow-up</th><th>Status</th><th></th></tr>${ls.filter(l=>l.next_followup).map(l=>`<tr><td>${esc(l.customer_name)}</td><td>${esc(l.profiles?.full_name||"")}</td><td>${esc(l.next_followup)}</td><td>${esc(l.status)}</td><td><button onclick="leadForm('${l.id}')">Update</button></td></tr>`).join("")}</table></div>`}
+async function pipeline(){const ls=await getLeads(),st=["New","Contacted","Interested","Follow-up","Negotiation","Won","Lost"];return `<div class="cards">${st.map(s=>`<div class="card">${s}<b>${ls.filter(l=>l.status===s).length}</b></div>`).join("")}</div>`}
+function pipeline(){const el=`<div id="pipe" class="cards">Loading…</div>`;setTimeout(async()=>{const ls=await getLeads(),st=["New","Contacted","Interested","Follow-up","Negotiation","Won","Lost"];document.getElementById("pipe").innerHTML=st.map(s=>`<div class="card">${s}<b>${ls.filter(l=>l.status===s).length}</b></div>`).join("")},0);return el}
+async function salesPage(){const el=`<div id="salesbox" class="panel">Loading…</div>`;setTimeout(async()=>{const ss=await getSales();document.getElementById("salesbox").innerHTML=`<table><tr><th>Date</th><th>Customer</th><th>Agent</th><th>Membership</th><th>MRP</th><th>Discount</th><th>Final</th></tr>${ss.map(s=>`<tr><td>${String(s.sold_at).slice(0,10)}</td><td>${esc(s.customer_name)}</td><td>${esc(s.profiles?.full_name||"")}</td><td>${esc(s.membership)}</td><td>${money(s.mrp)}</td><td>${money(s.discount_amount)} (${s.discount_pct}%)</td><td><b>${money(s.final_price)}</b></td></tr>`).join("")}</table>`},0);return el}
+function salesPage(){return `<div id="salesbox" class="panel">Loading…</div>`}
+async function saleForm(id){
+ const {data:l}=await sb.from("leads").select("*").eq("id",id).single();
+ showModal(`<h2>Convert to Sale</h2><p><b>${esc(l.customer_name)}</b></p><div class="grid"><div><label>MRP</label><input id="s_mrp" type="number" value="8000" oninput="calcSale()"></div><div><label>Discount ₹</label><input id="s_discount" type="number" value="0" oninput="calcSale()"></div></div><p>Discount: <b id="s_pct">0%</b> · Final: <b id="s_final">₹8,000</b></p><label>Payment Status</label><select id="s_payment"><option>Paid</option><option>Pending</option></select><label>Payment Mode</label><select id="s_mode"><option>Online</option><option>UPI</option><option>Card</option><option>Cash</option><option>Other</option></select><button class="primary" onclick="saveSale('${id}')">Confirm Sale</button> <button onclick="closeModal()">Cancel</button>`);
 }
-
-function openLeadModal(id){
-  populateSelects();
-  const overlay = document.getElementById('leadOverlay');
-  const form = document.getElementById('leadForm');
-  form.reset();
-  if(id){
-    const lead = getLeads().find(l=>l.id===id);
-    document.getElementById('leadModalTitle').textContent = 'Edit Lead';
-    document.getElementById('leadId').value = lead.id;
-    document.getElementById('f_name').value = lead.name;
-    document.getElementById('f_phone').value = lead.phone;
-    document.getElementById('f_email').value = lead.email || '';
-    document.getElementById('f_agent').value = lead.agent;
-    document.getElementById('f_plan').value = lead.plan;
-    document.getElementById('f_stage').value = lead.stage;
-    document.getElementById('f_next').value = lead.next || '';
-    document.getElementById('f_notes').value = lead.notes || '';
-  } else {
-    document.getElementById('leadModalTitle').textContent = 'Add Lead';
-    document.getElementById('leadId').value = '';
-    document.getElementById('f_next').value = addDays(todayISO(),1);
-  }
-  overlay.classList.add('open');
+function calcSale(){const m=+s_mrp.value||0,d=+s_discount.value||0;s_pct.textContent=(m?d/m*100:0).toFixed(2)+"%";s_final.textContent=money(m-d)}
+async function saveSale(id){
+ const {data:l}=await sb.from("leads").select("*").eq("id",id).single(),m=+s_mrp.value||0,d=+s_discount.value||0;
+ if(d>m)return alert("Discount cannot exceed MRP");
+ const r=await sb.from("sales").insert({lead_id:id,agent_id:l.agent_id,customer_name:l.customer_name,membership:l.membership,mrp:m,discount_amount:d,discount_pct:m?d/m*100:0,final_price:m-d,payment_status:s_payment.value,payment_mode:s_mode.value});
+ if(r.error)return alert(r.error.message);
+ await sb.from("leads").update({status:"Won",next_followup:null}).eq("id",id);
+ closeModal();render();
 }
-function closeModals(){
-  document.querySelectorAll('.overlay').forEach(o=>o.classList.remove('open'));
-}
-
-document.getElementById('leadForm').addEventListener('submit', e=>{
-  e.preventDefault();
-  const id = document.getElementById('leadId').value;
-  const leads = getLeads();
-  const data = {
-    name: document.getElementById('f_name').value.trim(),
-    phone: document.getElementById('f_phone').value.trim(),
-    email: document.getElementById('f_email').value.trim(),
-    agent: document.getElementById('f_agent').value,
-    plan: document.getElementById('f_plan').value,
-    stage: document.getElementById('f_stage').value,
-    next: document.getElementById('f_next').value || null,
-    notes: document.getElementById('f_notes').value.trim(),
-  };
-  if(id){
-    const lead = leads.find(l=>l.id===id);
-    Object.assign(lead, data);
-    lead.lastContact = todayISO();
-    showToast(`${data.name} updated`);
-  } else {
-    leads.push({ id: uid(), dateAdded: todayISO(), lastContact: todayISO(), ...data });
-    showToast(`${data.name} added to pipeline`);
-  }
-  setLeads(leads);
-  closeModals();
-  renderAll();
-});
-
-/* =========================================================================
-   MODAL: Settings (agents / plans)
-========================================================================= */
-function renderSettingsLists(){
-  document.getElementById('agentList').innerHTML = getAgents().map((a,i)=>`
-    <div class="settings-row"><span>${escapeHtml(a)}</span><button onclick="removeAgent(${i})">Remove</button></div>
-  `).join('') || `<div class="settings-row"><span style="color:var(--text-faint)">No agents yet</span></div>`;
-
-  document.getElementById('planList').innerHTML = getPlans().map((p,i)=>`
-    <div class="settings-row"><span>${escapeHtml(p.name)} — ₹${Number(p.price).toLocaleString('en-IN')}</span><button onclick="removePlan(${i})">Remove</button></div>
-  `).join('') || `<div class="settings-row"><span style="color:var(--text-faint)">No plans yet</span></div>`;
-}
-function removeAgent(i){ const a = getAgents(); a.splice(i,1); setAgents(a); renderSettingsLists(); renderAgentFilter(); renderAll(); }
-function removePlan(i){ const p = getPlans(); p.splice(i,1); setPlans(p); renderSettingsLists(); renderAll(); }
-
-document.getElementById('addAgentBtn').addEventListener('click', ()=>{
-  const input = document.getElementById('newAgentInput');
-  const val = input.value.trim();
-  if(!val) return;
-  const a = getAgents(); a.push(val); setAgents(a);
-  input.value=''; renderSettingsLists(); renderAgentFilter(); renderAll();
-});
-document.getElementById('addPlanBtn').addEventListener('click', ()=>{
-  const nameInput = document.getElementById('newPlanName');
-  const priceInput = document.getElementById('newPlanPrice');
-  const name = nameInput.value.trim(); const price = parseFloat(priceInput.value);
-  if(!name || isNaN(price)) return;
-  const p = getPlans(); p.push({name, price}); setPlans(p);
-  nameInput.value=''; priceInput.value=''; renderSettingsLists(); renderAll();
-});
-
-/* =========================================================================
-   DATA CONTROLS: export / import / reset / clear
-========================================================================= */
-function exportCSV(){
-  const leads = getLeads();
-  const headers = ['id','name','phone','email','agent','plan','stage','dateAdded','lastContact','next','notes'];
-  const rows = [headers.join(',')].concat(leads.map(l=>
-    headers.map(h=>`"${String(l[h] ?? '').replace(/"/g,'""')}"`).join(',')
-  ));
-  const blob = new Blob([rows.join('\n')], {type:'text/csv'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = `pipeline-export-${todayISO()}.csv`; a.click();
-  URL.revokeObjectURL(url);
-  showToast('CSV exported');
-}
-function importCSV(file){
-  const reader = new FileReader();
-  reader.onload = e=>{
-    const text = e.target.result;
-    const lines = text.split(/\r?\n/).filter(Boolean);
-    const headers = parseCsvLine(lines[0]);
-    const leads = lines.slice(1).map(line=>{
-      const vals = parseCsvLine(line);
-      const obj = {};
-      headers.forEach((h,i)=> obj[h] = vals[i] ?? '');
-      if(!obj.id) obj.id = uid();
-      return obj;
-    });
-    setLeads(leads);
-    renderAll();
-    showToast(`Imported ${leads.length} leads`);
-  };
-  reader.readAsText(file);
-}
-function parseCsvLine(line){
-  const out = []; let cur=''; let inQ=false;
-  for(let i=0;i<line.length;i++){
-    const c = line[i];
-    if(inQ){
-      if(c === '"' && line[i+1] === '"'){ cur+='"'; i++; }
-      else if(c === '"'){ inQ=false; }
-      else cur+=c;
-    } else {
-      if(c === '"') inQ=true;
-      else if(c === ','){ out.push(cur); cur=''; }
-      else cur+=c;
-    }
-  }
-  out.push(cur);
-  return out;
-}
-
-/* =========================================================================
-   UTIL
-========================================================================= */
-function escapeHtml(s){
-  return String(s ?? '').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-}
-let toastTimer;
-function showToast(msg){
-  const t = document.getElementById('toast');
-  document.getElementById('toastMsg').textContent = msg;
-  t.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=> t.classList.remove('show'), 2600);
-}
-
-/* =========================================================================
-   EVENTS
-========================================================================= */
-document.getElementById('addLeadBtn').addEventListener('click', ()=> openLeadModal(null));
-document.getElementById('settingsBtn').addEventListener('click', ()=>{ renderSettingsLists(); document.getElementById('settingsOverlay').classList.add('open'); });
-document.querySelectorAll('[data-close]').forEach(btn=> btn.addEventListener('click', closeModals));
-document.querySelectorAll('.overlay').forEach(ov=> ov.addEventListener('click', e=>{ if(e.target===ov) closeModals(); }));
-document.getElementById('agentFilter').addEventListener('change', renderAll);
-document.getElementById('exportBtn').addEventListener('click', exportCSV);
-document.getElementById('importBtn').addEventListener('click', ()=> document.getElementById('importFile').click());
-document.getElementById('importFile').addEventListener('change', e=>{ if(e.target.files[0]) importCSV(e.target.files[0]); e.target.value=''; });
-document.getElementById('resetBtn').addEventListener('click', ()=>{
-  if(confirm('Replace current data with the sample dataset? This cannot be undone.')){ seedData(); renderAgentFilter(); renderAll(); showToast('Sample data restored'); }
-});
-document.getElementById('clearBtn').addEventListener('click', ()=>{
-  if(confirm('Delete ALL leads? This cannot be undone.')){ setLeads([]); renderAll(); showToast('All leads cleared'); }
-});
-document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModals(); });
-
-/* =========================================================================
-   MASTER RENDER
-========================================================================= */
-function renderAll(){
-  renderKPIs();
-  renderRail();
-  renderKanban();
-  renderFollowups();
-}
-
-renderAsOf();
-renderAgentFilter();
-renderAll();
-</script>
-</body>
-</html>
+function reports(){const el=`<div id="rep" class="cards">Loading…</div>`;setTimeout(async()=>{const [l,s]=await Promise.all([getLeads(),getSales()]);document.getElementById("rep").innerHTML=`<div class="card">Total Leads<b>${l.length}</b></div><div class="card">Sales<b>${s.length}</b></div><div class="card">Revenue<b>${money(s.reduce((a,x)=>a+Number(x.final_price),0))}</b></div><div class="card">Discount<b>${money(s.reduce((a,x)=>a+Number(x.discount_amount),0))}</b></div>`},0);return el}
+function settings(){return `<div class="panel"><h3>Manager Settings</h3><p>Daily target and team-user administration should be managed in Supabase. The database policies already restrict agents to their own leads/sales and managers to the full team.</p><p class="muted">For production, keep the repository private if your GitHub plan permits it and never put a service-role key in this file.</p></div>`}
+function showModal(html){const d=document.createElement("div");d.id="modal";d.className="modal";d.innerHTML="<div>"+html+"</div>";document.body.appendChild(d)}
+function closeModal(){document.getElementById("modal")?.remove()}
+window.login=login;window.logout=logout;window.go=go;window.leadForm=leadForm;window.saveLead=saveLead;window.saleForm=saleForm;window.saveSale=saveSale;window.calcSale=calcSale;window.closeModal=closeModal;
+boot();
+</script></body></html>
