@@ -28,8 +28,8 @@ input,select,textarea{width:100%;padding:10px;border:1px solid #d8dde6;border-ra
   2) Replace SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY below.
   3) Run schema.sql in Supabase SQL Editor.
 */
-const SUPABASE_URL="YOUR_SUPABASE_URL";
-const SUPABASE_PUBLISHABLE_KEY="YOUR_SUPABASE_PUBLISHABLE_KEY";
+const SUPABASE_URL="https://mgeaijpojbgfgylbllfn.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY="sb_publishable_QzRz04LQSuAzDnAKrN0_XA_-6tyJPsR";
 const sb=(SUPABASE_URL.startsWith("http")&&SUPABASE_PUBLISHABLE_KEY.startsWith("ey"))
   ? supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY):null;
 
