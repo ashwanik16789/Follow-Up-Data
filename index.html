@@ -30,7 +30,9 @@ input,select,textarea{width:100%;padding:10px;border:1px solid #d8dde6;border-ra
 */
 const SUPABASE_URL="https://mgeaijpojbgfgylbllfn.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY="sb_publishable_QzRz04LQSuAzDnAKrN0_XA_-6tyJPsR";
-const sb=(SUPABASE_URL.startsWith("http")&&SUPABASE_PUBLISHABLE_KEY.startsWith("ey"))
+const sb=(SUPABASE_URL.startsWith("http") &&
+  (SUPABASE_PUBLISHABLE_KEY.startsWith("sb_publishable_") ||
+   SUPABASE_PUBLISHABLE_KEY.startsWith("ey")))
   ? supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY):null;
 
 let session=null, profile=null, screen="dashboard";
