@@ -92,7 +92,10 @@ async function getSales(){
  const {data,error}=await q;if(error){alert(error.message);return []}return data||[];
 }
 function dashboard(){
- return `<div id="dash"><p class="muted">Loading live data…</p></div>`;
+ const html = `<div id="dash"><p class="muted">Loading live data…</p></div>`;
+ setTimeout(fillDashboard, 0);
+ return html;
+}
 }
 async function fillDashboard(){
  const [ls,ss]=await Promise.all([getLeads(),getSales()]);
